@@ -3,7 +3,6 @@ package com.gelostech.dankmemes.activities
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
-import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.v7.widget.DefaultItemAnimator
 import android.support.v7.widget.LinearLayoutManager
@@ -14,22 +13,22 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import com.cocosw.bottomsheet.BottomSheet
 import com.gelostech.dankmemes.R
-import com.gelostech.dankmemes.adapters.MemesAdapter
+import com.gelostech.dankmemes.adapters.ProfileMemesAdapter
 import com.gelostech.dankmemes.commoners.BaseActivity
+import com.gelostech.dankmemes.commoners.Config
 import com.gelostech.dankmemes.commoners.DankMemesUtil
 import com.gelostech.dankmemes.models.FaveModel
 import com.gelostech.dankmemes.models.MemeModel
 import com.gelostech.dankmemes.models.ReportModel
 import com.gelostech.dankmemes.models.UserModel
 import com.gelostech.dankmemes.utils.RecyclerFormatter
-import com.gelostech.dankmemes.utils.loadUrl
 import com.google.firebase.database.*
-import kotlinx.android.synthetic.main.activity_profile.*
+import de.hdodenhof.circleimageview.CircleImageView
 import org.jetbrains.anko.alert
 import org.jetbrains.anko.toast
 
-class ProfileActivity : BaseActivity(), MemesAdapter.OnItemClickListener {
-    private lateinit var memesAdapter: MemesAdapter
+class ProfileActivity : BaseActivity(), ProfileMemesAdapter.OnItemClickListener, ProfileMemesAdapter.OnProfileClickListener {
+    private lateinit var memesAdapter: ProfileMemesAdapter
     private lateinit var image: Bitmap
     private lateinit var profileRef: DatabaseReference
     private lateinit var memesQuery: Query
@@ -67,20 +66,9 @@ class ProfileActivity : BaseActivity(), MemesAdapter.OnItemClickListener {
         viewProfileRv.addItemDecoration(RecyclerFormatter.DoubleDividerItemDecoration(this))
         viewProfileRv.itemAnimator = DefaultItemAnimator()
 
-        memesAdapter = MemesAdapter(this, this)
+        memesAdapter = ProfileMemesAdapter(this, this, this)
         viewProfileRv.adapter = memesAdapter
 
-        viewProfileImage.setOnClickListener {
-            temporarilySaveImage()
-            startActivity(Intent(this, ViewMemeActivity::class.java))
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-        }
-
-    }
-
-    private fun temporarilySaveImage() {
-        image = (viewProfileImage.drawable as BitmapDrawable).bitmap
-        DankMemesUtil.saveTemporaryImage(this, image)
     }
 
     private val profileListener = object : ValueEventListener {
@@ -92,9 +80,7 @@ class ProfileActivity : BaseActivity(), MemesAdapter.OnItemClickListener {
             val user = p0.getValue(UserModel::class.java)!!
             name = user.userName!!
 
-            viewProfileName.text = user.userName
-            viewProfileBio.text = user.userBio
-            viewProfileImage.loadUrl(user.userAvatar!!)
+            memesAdapter.addProfile(user)
         }
     }
 
@@ -140,6 +126,16 @@ class ProfileActivity : BaseActivity(), MemesAdapter.OnItemClickListener {
         }
     }
 
+    /**
+     *  Handle meme item clicks
+     *
+     *  0 -> like meme
+     *  1 -> more options
+     *  2 -> fave meme
+     *  3 -> comments
+     *  4 -> image
+     *  5 -> user icon
+     */
     override fun onItemClick(meme: MemeModel, viewID: Int, image: Bitmap?) {
         when(viewID) {
             0 -> likePost(meme.id!!)
@@ -151,12 +147,22 @@ class ProfileActivity : BaseActivity(), MemesAdapter.OnItemClickListener {
         }
     }
 
+    override fun onProfileClick(user: UserModel, view: CircleImageView) {
+        image = (view.drawable as BitmapDrawable).bitmap
+        DankMemesUtil.saveTemporaryImage(this, image)
+
+        val i = Intent(this, ViewMemeActivity::class.java)
+        i.putExtra(Config.PIC_URL, user.userAvatar)
+        DankMemesUtil.fadeIn(this)
+    }
+
     private fun showMeme(meme: MemeModel, image: Bitmap) {
         val i = Intent(this, ViewMemeActivity::class.java)
         DankMemesUtil.saveTemporaryImage(this, image)
         i.putExtra("caption", meme.caption)
+        i.putExtra(Config.PIC_URL, meme.imageUrl)
         startActivity(i)
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        DankMemesUtil.fadeIn(this)
     }
 
     private fun showBottomSheet(meme: MemeModel, image: Bitmap) {

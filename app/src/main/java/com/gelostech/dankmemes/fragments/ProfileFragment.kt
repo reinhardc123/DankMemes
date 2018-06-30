@@ -12,27 +12,27 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import com.cocosw.bottomsheet.BottomSheet
 
 import com.gelostech.dankmemes.R
 import com.gelostech.dankmemes.activities.CommentActivity
 import com.gelostech.dankmemes.activities.ViewMemeActivity
-import com.gelostech.dankmemes.adapters.MemesAdapter
+import com.gelostech.dankmemes.adapters.ProfileMemesAdapter
 import com.gelostech.dankmemes.commoners.BaseFragment
+import com.gelostech.dankmemes.commoners.Config
 import com.gelostech.dankmemes.commoners.DankMemesUtil
 import com.gelostech.dankmemes.models.FaveModel
 import com.gelostech.dankmemes.models.MemeModel
 import com.gelostech.dankmemes.models.UserModel
 import com.gelostech.dankmemes.utils.RecyclerFormatter
-import com.gelostech.dankmemes.utils.loadUrl
 import com.google.firebase.database.*
+import de.hdodenhof.circleimageview.CircleImageView
 import kotlinx.android.synthetic.main.fragment_profile.*
 import org.jetbrains.anko.alert
 
 
-class ProfileFragment : BaseFragment(), MemesAdapter.OnItemClickListener {
-    private lateinit var memesAdapter: MemesAdapter
+class ProfileFragment : BaseFragment(), ProfileMemesAdapter.OnItemClickListener, ProfileMemesAdapter.OnProfileClickListener {
+    private lateinit var memesAdapter: ProfileMemesAdapter
     private lateinit var image: Bitmap
     private lateinit var user: UserModel
     private lateinit var profileRef: DatabaseReference
@@ -69,7 +69,7 @@ class ProfileFragment : BaseFragment(), MemesAdapter.OnItemClickListener {
         profileRv.addItemDecoration(RecyclerFormatter.DoubleDividerItemDecoration(activity!!))
         profileRv.itemAnimator = DefaultItemAnimator()
 
-        memesAdapter = MemesAdapter(activity!!, this)
+        memesAdapter = ProfileMemesAdapter(activity!!, this, this)
         profileRv.adapter = memesAdapter
 
         profileRv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -83,11 +83,6 @@ class ProfileFragment : BaseFragment(), MemesAdapter.OnItemClickListener {
             }
         })
 
-        profileImage.setOnClickListener {
-            temporarilySaveImage()
-            startActivity(Intent(activity, ViewMemeActivity::class.java))
-            activity?.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-        }
     }
 
     private val profileListener = object : ValueEventListener {
@@ -98,9 +93,8 @@ class ProfileFragment : BaseFragment(), MemesAdapter.OnItemClickListener {
         override fun onDataChange(p0: DataSnapshot) {
             user = p0.getValue(UserModel::class.java)!!
 
-            profileName.text = user.userName
-            profileBio.text = user.userBio
-            profileImage.loadUrl(user.userAvatar!!)
+            Log.d(TAG, "Loaded user ${user.userName}")
+            memesAdapter.addProfile(user)
         }
     }
 
@@ -145,14 +139,23 @@ class ProfileFragment : BaseFragment(), MemesAdapter.OnItemClickListener {
         }
     }
 
-    private fun temporarilySaveImage() {
-        image = (profileImage.drawable as BitmapDrawable).bitmap
-        DankMemesUtil.saveTemporaryImage(activity!!, image)
-    }
-
+    /**
+     *  Fetches current user in the main activity when edit profile MenuItem clicked
+     */
     fun getUser() : UserModel = user
 
+    /**
+     *  Handle meme item clicks
+     *
+     *  0 -> like meme
+     *  1 -> more options
+     *  2 -> fave meme
+     *  3 -> comments
+     *  4 -> image
+     *  5 -> user icon
+     */
     override fun onItemClick(meme: MemeModel, viewID: Int, image: Bitmap?) {
+
         when(viewID) {
             0 -> likePost(meme.id!!)
             1 -> showBottomSheet(meme, image!!)
@@ -162,12 +165,29 @@ class ProfileFragment : BaseFragment(), MemesAdapter.OnItemClickListener {
         }
     }
 
+    /**
+     * Handle user profile avatar click
+     * Loads avatar in the ViewMemeActivity
+     * @param user Current user whose avatar is shown
+     * @param view CircleImageView that contains the avatar. Used to get the bitmap
+     */
+    override fun onProfileClick(user: UserModel, view: CircleImageView) {
+        image = (view.drawable as BitmapDrawable).bitmap
+        DankMemesUtil.saveTemporaryImage(activity!!, image)
+
+        val i = Intent(activity, ViewMemeActivity::class.java )
+        i.putExtra(Config.PIC_URL, user.userAvatar!!)
+        DankMemesUtil.fadeIn(activity!!)
+    }
+
+
     private fun showMeme(meme: MemeModel, image: Bitmap) {
         val i = Intent(activity, ViewMemeActivity::class.java)
         DankMemesUtil.saveTemporaryImage(activity!!, image)
         i.putExtra("caption", meme.caption)
+        i.putExtra(Config.PIC_URL, meme.imageUrl)
         startActivity(i)
-        activity?.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        DankMemesUtil.fadeIn(activity!!)
     }
 
     private fun showBottomSheet(meme: MemeModel, image: Bitmap) {
