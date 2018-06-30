@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.view.View
 import com.gelostech.dankmemes.R
 import com.gelostech.dankmemes.commoners.BaseActivity
+import com.gelostech.dankmemes.commoners.Config
+import com.gelostech.dankmemes.utils.loadUrl
 import kotlinx.android.synthetic.main.activity_view_meme.*
 
 class ViewMemeActivity : BaseActivity() {
@@ -15,6 +17,9 @@ class ViewMemeActivity : BaseActivity() {
 
         val image = BitmapFactory.decodeStream(openFileInput("image"))
         viewMemeImage.setImageBitmap(image)
+
+        val imageUrl = intent.getStringExtra(Config.PIC_URL)
+        viewMemeImage.loadUrl(imageUrl)
 
         val caption = intent.getStringExtra("caption")
         if (!caption.isNullOrEmpty()) {
