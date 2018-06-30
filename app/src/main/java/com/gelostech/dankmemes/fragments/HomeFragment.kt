@@ -6,38 +6,34 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.support.v7.widget.DefaultItemAnimator
 import android.support.v7.widget.LinearLayoutManager
+import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.FrameLayout
 import com.cocosw.bottomsheet.BottomSheet
-
 import com.gelostech.dankmemes.R
 import com.gelostech.dankmemes.activities.CommentActivity
 import com.gelostech.dankmemes.activities.ProfileActivity
 import com.gelostech.dankmemes.activities.ViewMemeActivity
 import com.gelostech.dankmemes.adapters.MemesAdapter
 import com.gelostech.dankmemes.commoners.BaseFragment
+import com.gelostech.dankmemes.commoners.Config
 import com.gelostech.dankmemes.commoners.DankMemesUtil
+import com.gelostech.dankmemes.models.FaveModel
 import com.gelostech.dankmemes.models.MemeModel
+import com.gelostech.dankmemes.models.ReportModel
 import com.gelostech.dankmemes.utils.RecyclerFormatter
 import com.google.firebase.database.*
-import kotlinx.android.synthetic.main.fragment_home.*
-import org.jetbrains.anko.alert
-import org.jetbrains.anko.toast
-import android.support.v7.widget.RecyclerView
-import android.widget.EditText
-import android.widget.FrameLayout
-import com.gelostech.dankmemes.models.FaveModel
-import com.gelostech.dankmemes.models.ReportModel
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.Transaction
-import com.google.firebase.database.MutableData
 import com.mopub.nativeads.MoPubNativeAdPositioning
 import com.mopub.nativeads.MoPubRecyclerAdapter
 import com.mopub.nativeads.MoPubStaticNativeAdRenderer
 import com.mopub.nativeads.ViewBinder
+import kotlinx.android.synthetic.main.fragment_home.*
+import org.jetbrains.anko.alert
+import org.jetbrains.anko.toast
 
 
 class HomeFragment : BaseFragment(), MemesAdapter.OnItemClickListener {
@@ -165,7 +161,7 @@ class HomeFragment : BaseFragment(), MemesAdapter.OnItemClickListener {
             val i = Intent(activity, ProfileActivity::class.java)
             i.putExtra("userId", meme.memePosterID)
             startActivity(i)
-            activity?.overridePendingTransition(R.anim.enter_b, R.anim.exit_a)
+            DankMemesUtil.animateEnterRight(activity!!)
         }
     }
 
@@ -173,8 +169,9 @@ class HomeFragment : BaseFragment(), MemesAdapter.OnItemClickListener {
         val i = Intent(activity, ViewMemeActivity::class.java)
         DankMemesUtil.saveTemporaryImage(activity!!, image)
         i.putExtra("caption", meme.caption)
+        i.putExtra(Config.PIC_URL, meme.imageUrl)
         startActivity(i)
-        activity?.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        DankMemesUtil.fadeIn(activity!!)
     }
 
     private fun showBottomSheet(meme: MemeModel, image: Bitmap) {
@@ -205,7 +202,7 @@ class HomeFragment : BaseFragment(), MemesAdapter.OnItemClickListener {
         val i = Intent(activity, CommentActivity::class.java)
         i.putExtra("memeId", meme.id)
         startActivity(i)
-        activity?.overridePendingTransition(R.anim.enter_b, R.anim.exit_a)
+        DankMemesUtil.animateEnterRight(activity!!)
     }
 
     private fun deletePost(meme: MemeModel) {
